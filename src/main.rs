@@ -19,6 +19,11 @@ struct NewPost<'r> {
     content: String
 }
 
+#[derive(FromForm)]
+struct ExistingPost<> {
+    content: String
+}
+
 // http://localhost:8000/new
 #[get("/new")]
 fn new_post_form() -> content::Html<String> {
@@ -55,6 +60,28 @@ fn post(post_name: String) -> content::Html<String> {
     content::Html(html_text)
 }
 
+// http://localhost:8000/edit/your-post-name
+#[get("/edit/<post_name>")]
+fn edit_post_form(post_name: String) -> content::Html<String> {
+    let file_path = format!("posts/{}.md", post_name);
+    let post_content = std::fs::read_to_string(file_path).unwrap();
+    let html = format!(r#"
+    <form action="/edit/{}" method="post">
+        <label for="content">Post content</label>
+        <textarea id="content" name="content" rows="10">{}</textarea>
+        <br>
+        <input type="submit" value="Save">
+    </form>
+    "#, post_name, post_content);
+    content::Html(html)
+}
+
+#[post("/edit/<post_name>", data = "<post_form>")]
+fn update_post(post_name: String, post_form: Form<ExistingPost>) -> Redirect {
+    let file_path = format!("posts/{}.md", post_name);
+    let _ = std::fs::write(file_path, post_form.content.to_owned());
+    Redirect::to(format!("/post/{}", post_name))
+}
 fn main() {
-    rocket::ignite().mount("/", routes![new_post_form, create_post, post]).launch();
+    rocket::ignite().mount("/", routes![new_post_form, create_post, post, edit_post_form, update_post]).launch();
 }
