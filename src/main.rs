@@ -2,9 +2,47 @@
 extern crate rocket;
 extern crate rocket_contrib;
 
+use std::fs;
+use std::io::Write;
+use rocket::FromForm;
 use rocket::get;
+use rocket::post;
 use rocket::routes;
+use rocket::http::RawStr;
+use rocket::request::Form;
 use rocket::response::content;
+use rocket::response::Redirect;
+
+#[derive(FromForm)]
+struct NewPost<'r> {
+    title: &'r RawStr,
+    content: String
+}
+
+// http://localhost:8000/new
+#[get("/new")]
+fn new_post_form() -> content::Html<String> {
+    let html = r#"
+    <form action="/new" method="post">
+        <label for="title">Post title</label>
+        <input type="text" id="title" name="title" required>
+        <br>
+        <label for="content">Post content</label>
+        <textarea id="content" name="content" rows="10" required></textarea>
+        <br>
+        <input type="submit" value="Create Post">
+    </form>
+    "#;
+    content::Html(html.into())
+}
+
+#[post("/new", data = "<post_form>")]
+fn create_post(post_form: Form<NewPost>) -> Redirect {
+    let file_path = format!("posts/{}.md", post_form.title);
+    let mut file = fs::File::create(file_path).unwrap();
+    let _ = file.write_all(post_form.content.as_bytes());
+    Redirect::to(format!("/post/{}", post_form.title))
+}
 
 // http://localhost:8000/post/your-post-name
 #[get("/post/<post_name>")]
@@ -18,5 +56,5 @@ fn post(post_name: String) -> content::Html<String> {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![post]).launch();
+    rocket::ignite().mount("/", routes![new_post_form, create_post, post]).launch();
 }
