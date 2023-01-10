@@ -2,26 +2,26 @@
 extern crate rocket;
 extern crate rocket_contrib;
 
-use std::fs;
-use std::io::Write;
-use rocket::FromForm;
 use rocket::get;
-use rocket::post;
-use rocket::routes;
 use rocket::http::RawStr;
+use rocket::post;
 use rocket::request::Form;
 use rocket::response::content;
 use rocket::response::Redirect;
+use rocket::routes;
+use rocket::FromForm;
+use std::fs;
+use std::io::Write;
 
 #[derive(FromForm)]
 struct NewPost<'r> {
     title: &'r RawStr,
-    content: String
+    content: String,
 }
 
 #[derive(FromForm)]
-struct ExistingPost<> {
-    content: String
+struct ExistingPost {
+    content: String,
 }
 
 // http://localhost:8000/new
@@ -71,7 +71,11 @@ fn posts() -> content::Html<String> {
     for file in post_files {
         let file = file.unwrap();
         let file_name = file.file_name().to_str().unwrap().to_owned();
-        post_list.push_str(&format!("<li><a href='/post/{}'>{}</a></li>",file_name.split('.').next().unwrap(),file_name));
+        post_list.push_str(&format!(
+            "<li><a href='/post/{}'>{}</a></li>",
+            file_name.split('.').next().unwrap(),
+            file_name
+        ));
     }
 
     post_list.push_str("</ul>");
@@ -83,14 +87,16 @@ fn posts() -> content::Html<String> {
 fn edit_post_form(post_name: String) -> content::Html<String> {
     let file_path = format!("posts/{post_name}.md");
     let post_content = std::fs::read_to_string(file_path).unwrap();
-    let html = format!(r#"
+    let html = format!(
+        r#"
     <form action="/edit/{post_name}" method="post">
         <label for="content">Post content</label>
         <textarea id="content" name="content" rows="10">{post_content}</textarea>
         <br>
         <input type="submit" value="Save">
     </form>
-    "#);
+    "#
+    );
     content::Html(html)
 }
 
@@ -102,5 +108,17 @@ fn update_post(post_name: String, post_form: Form<ExistingPost>) -> Redirect {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![new_post_form, create_post, post, posts, edit_post_form, update_post]).launch();
+    rocket::ignite()
+        .mount(
+            "/",
+            routes![
+                new_post_form,
+                create_post,
+                post,
+                posts,
+                edit_post_form,
+                update_post
+            ],
+        )
+        .launch();
 }
