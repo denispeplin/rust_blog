@@ -60,6 +60,24 @@ fn post(post_name: String) -> content::Html<String> {
     content::Html(html_text)
 }
 
+#[get("/posts")]
+fn posts() -> content::Html<String> {
+    let dir = "posts";
+    let post_files = std::fs::read_dir(dir).unwrap();
+
+    let mut post_list = String::new();
+    post_list.push_str("<ul>");
+
+    for file in post_files {
+        let file = file.unwrap();
+        let file_name = file.file_name().to_str().unwrap().to_owned();
+        post_list.push_str(&format!("<li><a href='/post/{}'>{}</a></li>",file_name.split(".").next().unwrap(),file_name));
+    }
+
+    post_list.push_str("</ul>");
+    content::Html(post_list)
+}
+
 // http://localhost:8000/edit/your-post-name
 #[get("/edit/<post_name>")]
 fn edit_post_form(post_name: String) -> content::Html<String> {
@@ -82,6 +100,7 @@ fn update_post(post_name: String, post_form: Form<ExistingPost>) -> Redirect {
     let _ = std::fs::write(file_path, post_form.content.to_owned());
     Redirect::to(format!("/post/{}", post_name))
 }
+
 fn main() {
-    rocket::ignite().mount("/", routes![new_post_form, create_post, post, edit_post_form, update_post]).launch();
+    rocket::ignite().mount("/", routes![new_post_form, create_post, post, posts, edit_post_form, update_post]).launch();
 }
