@@ -10,6 +10,10 @@ use rocket::response::content;
 use rocket::response::Redirect;
 use rocket::routes;
 use rocket::FromForm;
+
+extern crate chrono;
+use chrono::prelude::*;
+
 use std::fs;
 use std::io::Write;
 
@@ -43,9 +47,16 @@ fn new_post_form() -> content::Html<String> {
 
 #[post("/new", data = "<post_form>")]
 fn create_post(post_form: Form<NewPost>) -> Redirect {
+    let current_date = Local::now().to_string();
     let file_path = format!("posts/{}.md", post_form.title);
     let mut file = fs::File::create(file_path).unwrap();
-    let _ = file.write_all(post_form.content.as_bytes());
+    let _ = file.write_all(
+        format!(
+            "---\ntitle: {}\ncreated_at: {}\n---\n\n{}",
+            post_form.title, current_date, post_form.content
+        )
+        .as_bytes(),
+    );
     Redirect::to(format!("/post/{}", post_form.title))
 }
 
