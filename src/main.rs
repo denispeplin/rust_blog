@@ -3,7 +3,6 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 use rocket::get;
-use rocket::http::RawStr;
 use rocket::post;
 use rocket::request::Form;
 use rocket::response::content;
@@ -17,9 +16,12 @@ use chrono::prelude::*;
 use std::fs;
 use std::io::Write;
 
+extern crate slug;
+use self::slug::slugify;
+
 #[derive(FromForm)]
-struct NewPost<'r> {
-    title: &'r RawStr,
+struct NewPost {
+    title: String,
     content: String,
 }
 
@@ -48,7 +50,8 @@ fn new_post_form() -> content::Html<String> {
 #[post("/new", data = "<post_form>")]
 fn create_post(post_form: Form<NewPost>) -> Redirect {
     let current_date = Local::now().to_string();
-    let file_path = format!("posts/{}.md", post_form.title);
+    let file_name = slugify(&post_form.title);
+    let file_path = format!("posts/{}.md", file_name);
     let mut file = fs::File::create(file_path).unwrap();
     let _ = file.write_all(
         format!(
@@ -57,7 +60,7 @@ fn create_post(post_form: Form<NewPost>) -> Redirect {
         )
         .as_bytes(),
     );
-    Redirect::to(format!("/post/{}", post_form.title))
+    Redirect::to(format!("/post/{}", file_name))
 }
 
 // http://localhost:8000/post/your-post-name
